@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prototipo · Control de obras · Soraku Studio</title>
+<style>
+:root{--bg:#f4f7f7;--card:#fff;--ink:#0d1b2a;--mute:#5b6b78;--line:#d6e0e2;--teal:#0db3ae;--g:#1f7a45;--y:#8a5a00;--r:#b3321f;--gb:#e1f5e8;--yb:#fff0c2;--rb:#fde4e1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1b2a;--card:#14263a;--ink:#e8f1f2;--mute:#9db0bb;--line:#26405a;--g:#7fe0a3;--y:#f3c85c;--r:#ff9b8c;--gb:#173d2e;--yb:#47390f;--rb:#4a1f1b}}
+:root[data-theme="dark"]{--bg:#0d1b2a;--card:#14263a;--ink:#e8f1f2;--mute:#9db0bb;--line:#26405a;--g:#7fe0a3;--y:#f3c85c;--r:#ff9b8c;--gb:#173d2e;--yb:#47390f;--rb:#4a1f1b}
+*{box-sizing:border-box}html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:env(safe-area-inset-top,0px);z-index:3}
+header b{flex:1;font-size:17px}select,button,input,textarea{font:inherit;color:inherit}
+select,input,textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px}
+button{border:1px solid var(--teal);background:var(--teal);color:#06292a;font-weight:600;border-radius:8px;padding:9px 14px;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border-color:var(--line)}
+main{max-width:900px;margin:0 auto;padding:16px}
+h2{margin:18px 0 8px;font-size:18px}.mute{color:var(--mute);font-size:14px}
+.note{background:var(--yb);color:var(--ink);border-radius:8px;padding:8px 12px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.obra{cursor:pointer;text-align:left;width:100%}.obra:hover{border-color:var(--teal)}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:13px;font-weight:700}
+.g{background:var(--gb);color:var(--g)}.y{background:var(--yb);color:var(--y)}.r{background:var(--rb);color:var(--r)}.n{background:var(--line);color:var(--ink)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--teal)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.kpis b{font-size:22px;display:block}
+details{margin-top:6px;font-size:13px;color:var(--mute)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+.alert{padding:10px 12px;border-radius:8px;margin:6px 0;font-size:14px}
+label{display:block;margin:10px 0 4px;font-weight:600}input,select,textarea{width:100%}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px}
+</style></head><body>
+<header><b>Control de obras</b>
+<select id="role" aria-label="Rol" onchange="S.role=this.value;S.obra=null;R()"><option value="sup">Rol: Supervisora</option><option value="jef">Rol: Jefe de cuadrilla</option><option value="rrhh">Rol: RRHH</option></select></header>
+<main><p class="note">Prototipo con datos ficticios. Cambia el rol arriba para ver qué ve cada persona.</p><div id="app"></div></main><div id="t"></div>
+<script>
+const crew=[["Lorenzo Pérez","Jefe de cuadrilla"],["Andrés Soto","Maestro aplicador"],["Camila Vera","Ayudante"],["Jorge Muñoz","Ayudante"]];
+const O=[
+{n:"Remodelación Nave Industrial",l:"Lampa",st:"op",prog:.53,gasto:47e6,mat:.85,part:[
+{n:"Demolición de tabiques",u:"m²",pl:400,ex:400,pr:8e6},{n:"Radier industrial",u:"m²",pl:850,ex:600,pr:25.5e6},
+{n:"Estructura metálica",u:"kg",pl:12000,ex:5400,pr:36e6},{n:"Pintura industrial",u:"m²",pl:1800,ex:360,pr:18e6},{n:"Instalación eléctrica",u:"ml",pl:600,ex:150,pr:12.5e6}]},
+{n:"Ampliación Planta de Frío",l:"Maipú",st:"op",prog:.20,av:.22,cpi:1.02,mat:.9,docs:1},
+{n:"Reparación Cubierta Bodega Sur",l:"Quilicura",st:"op",prog:.45,av:.31,cpi:.93,mat:.4,docs:.5},
+{n:"Remodelación Oficinas Industriales",l:"Pudahuel",st:"fin",prog:1,av:1,cpi:1.03,mat:1,docs:1}];
+const S={role:"sup",obra:null,on:true,q:[],done:false,f:{p:0,q:"",nt:"",ph:false,sf:false}};
+const $=x=>document.getElementById(x),clp=n=>"$"+Math.round(n).toLocaleString("es-CL"),pc=n=>Math.round(n*100)+"%";
+const rep=()=>3+(S.done?1:0);
+function M(o){let av=o.av,cpi=o.cpi,docs=o.docs;
+if(o.part){const pr=o.part.reduce((a,p)=>a+p.pr,0),ev=o.part.reduce((a,p)=>a+p.pr*Math.min(1,p.ex/p.pl),0);av=ev/pr;cpi=ev/o.gasto;docs=rep()/crew.length}
+const spi=av/o.prog,s={p:spi>=1?"g":spi>=.9?"y":"r",c:cpi>=1?"g":cpi>=.95?"y":"r",m:o.mat>=.8?"g":o.mat>=.5?"y":"r",d:docs>=1?"g":docs>=.5?"y":"r"};
+const w=["r","y","g"].find(k=>Object.values(s).includes(k));
+const why=s.p!="g"?"Atraso de "+Math.round((o.prog-av)*100)+" pts vs. programado":s.c!="g"?"Costo sobre lo presupuestado":s.m!="g"?"Abastecimiento de materiales en "+pc(o.mat):s.d!="g"?"Faltan reportes de hoy":"Todo en orden";
+return{av,cpi,docs,spi,s,w,why}}
+const P=(k,t)=>`<span class="pill ${k}">${t}</span>`,L={g:"Al día",y:"Al límite",r:"Crítica"};
+function card(o,i){const m=M(o);return`<button class="card obra" onclick="S.obra=${i};R()"><b>${o.n}</b><div class="mute">${o.l}</div><div style="margin:8px 0">${o.st=="fin"?P("n","Finalizada"):P(m.w,L[m.w])}</div><div class="mute">${o.st=="fin"?"Cerrada en plazo y presupuesto":m.why}</div><div class="bar"><i style="width:${pc(m.av)}"></i></div><div class="mute">Avance ${pc(m.av)} · programado ${pc(o.prog)}</div></button>`}
+function kpi(t,v,k,h){return`<div class="card"><span class="mute">${t}</span><b>${v}</b>${P(k,L[k])}<details><summary>¿Cómo se calculó?</summary>${h}</details></div>`}
+function detail(){const o=O[S.obra],m=M(o);let h=`<button class="alt" onclick="S.obra=null;R()">← Mis obras</button><h2>${o.n} · ${o.l} ${o.st=="fin"?P("n","Finalizada"):P(m.w,L[m.w])}</h2>
+<div class="kpis">${kpi("Avance real",pc(m.av),m.s.p,"Suma ponderada: cantidad ejecutada ÷ cantidad planificada de cada partida, según su peso en el presupuesto.")}
+${kpi("Plazo (SPI)",m.spi.toFixed(2),m.s.p,"Avance real ÷ avance programado ("+pc(o.prog)+"). Verde ≥ 1,00 · amarillo ≥ 0,90 · crítico < 0,90.")}
+${kpi("Costo (CPI)",m.cpi.toFixed(2),m.s.c,"Valor ganado ÷ gasto real. Verde ≥ 1,00 · amarillo ≥ 0,95. Mayor a 1 significa que rinde más de lo presupuestado.")}
+${kpi("Materiales",pc(o.mat),m.s.m,"Comprado ÷ requerido. Verde ≥ 80% · amarillo ≥ 50%.")}
+${kpi("Documentación hoy",pc(m.docs),m.s.d,"Personas que reportaron hoy ÷ dotación. Verde = todos.")}</div>`;
+h+="<h2>Alertas</h2>";let a=[];
+if(m.s.d!="g"&&o.st!="fin")a.push(["y","Hoy faltan reportes de trabajo. Se avisó a quienes no documentaron."]);
+if(m.s.p!="g")a.push([m.s.p,"La obra va "+Math.round((o.prog-m.av)*100)+" pts bajo lo programado."]);
+(o.part||[]).forEach(p=>{if(p.ex/p.pl<o.prog-.15)a.push(["y",p.n+": "+pc(p.ex/p.pl)+" ejecutado, esperado cerca de "+pc(o.prog)+"."])});
+h+=a.length?a.map(x=>`<div class="alert ${x[0]}">${x[1]}</div>`).join(""):`<div class="alert g">Sin alertas.</div>`;
+if(o.part)h+=`<h2>Partidas</h2><div class="tw card"><table><tr><th>Partida</th><th>Avance</th><th>Ejecutado</th><th>Presupuesto</th></tr>${o.part.map(p=>`<tr><td>${p.n}</td><td style="min-width:110px">${pc(p.ex/p.pl)}<div class="bar"><i style="width:${pc(p.ex/p.pl)}"></i></div></td><td>${p.ex.toLocaleString("es-CL")} / ${p.pl.toLocaleString("es-CL")} ${p.u}</td><td>${clp(p.pr)}</td></tr>`).join("")}</table><p class="mute">Gasto real acumulado: ${clp(o.gasto)} (dato sensible: solo supervisión).</p></div>`;
+else h+=`<p class="mute">Detalle de partidas disponible en la obra "Remodelación Nave Industrial" de este prototipo.</p>`;return h}
+function home(){const op=O.map((o,i)=>[o,i]).filter(x=>x[0].st=="op"),fi=O.map((o,i)=>[o,i]).filter(x=>x[0].st=="fin");
+return`<h2>Obras operativas</h2><div class="grid">${op.map(x=>card(x[0],x[1])).join("")}</div><h2>Obras finalizadas</h2><div class="grid">${fi.map(x=>card(x[0],x[1])).join("")}</div>`}
+function worker(){const o=O[0],f=S.f,q=S.q.length;
+const b=S.done&&!q?`<div class="alert g">Reporte de hoy enviado. Gracias.</div>`:q?`<div class="alert y">${q} reporte guardado en el teléfono, pendiente de enviar. Se sube al recuperar señal.</div>`:`<div class="alert r">Aún no documentas el trabajo de hoy. Tu supervisora será avisada a las 18:00.</div>`;
+return`<h2>Reporte de hoy · ${o.n}</h2><p class="mute">Conexión: ${S.on?"En línea":"Sin conexión"} <button class="alt" onclick="tog()">${S.on?"Simular sin señal":"Recuperar señal"}</button></p>${b}
+<div class="card"><label>Partida</label><select onchange="S.f.p=+this.value">${o.part.map((p,i)=>`<option value="${i}" ${f.p==i?"selected":""}>${p.n} (${p.u})</option>`).join("")}</select>
+<label>Cantidad ejecutada hoy</label><input type="number" min="0" value="${f.q}" oninput="S.f.q=this.value" placeholder="Ej: 80">
+<label>Observaciones</label><textarea rows="2" oninput="S.f.nt=this.value" placeholder="Clima, novedades, incidentes">${f.nt}</textarea>
+<p><button class="alt" onclick="S.f.ph=!S.f.ph;R()">${f.ph?"Foto adjunta ✓":"Adjuntar foto"}</button></p>
+<label style="font-weight:400"><input type="checkbox" style="width:auto" ${f.sf?"checked":""} onchange="S.f.sf=this.checked"> Sin faena hoy (lluvia, feriado, otro)</label>
+<p><button onclick="send()">Enviar reporte</button></p></div>`}
+function send(){const f=S.f,o=O[0];if(!f.sf&&!(+f.q>0)){toast("Ingresa una cantidad o marca \"Sin faena\"");return}
+const r={p:f.p,q:f.sf?0:+f.q};if(S.on){ap(r);S.done=true;toast("Reporte enviado")}else{S.q.push(r);toast("Guardado en el teléfono")}
+S.f={p:f.p,q:"",nt:"",ph:false,sf:false};R()}
+function ap(r){const p=O[0].part[r.p];p.ex=Math.min(p.pl,p.ex+r.q)}
+function tog(){S.on=!S.on;if(S.on&&S.q.length){S.q.forEach(ap);S.q=[];S.done=true;toast("Reportes sincronizados")}R()}
+function hr(){return`<h2>Dotación en terreno · hoy</h2><div class="card tw"><table><tr><th>Persona</th><th>Cargo</th><th>Reporte de hoy</th></tr>${crew.map((c,i)=>`<tr><td>${c[0]}</td><td>${c[1]}</td><td>${i>0||S.done?P("g","Enviado"):P("r","Pendiente")}</td></tr>`).join("")}</table></div>
+<div class="alert n" style="margin-top:12px">Sueldos y costos de la obra: acceso restringido. Solo la supervisora puede otorgar este permiso.</div>`}
+function toast(m){$("t").innerHTML=`<div class="toast" role="status">${m}</div>`;setTimeout(()=>$("t").innerHTML="",2500)}
+function R(){$("role").value=S.role;$("app").innerHTML=S.role=="jef"?worker():S.role=="rrhh"?hr():S.obra===null?home():detail()}
+R();
+</script></body></html>
