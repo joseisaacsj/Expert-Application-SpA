@@ -1,6 +1,6 @@
 import { seed } from './seed.js'
 
-const CLAVE = 'ea-demo-db-v1'
+const CLAVE = 'ea-demo-db-v2'
 
 // En memoria cuando no hay localStorage (tests / SSR)
 let memoria = null

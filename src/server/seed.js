@@ -109,10 +109,22 @@ export function seed() {
   ]
 
   // --- Partidas: [nombre, unidad, planificada, presupuesto] ---
+  // --- Partidas: [nombre, unidad, planificada, presupuesto neto CLP] ---
+  // precioUnitarioCLP derivado asumiendo GG 32,5% + utilidad 15% (factor 1,475).
   const partidas = []
   const agregarPartidas = (obraId, lista) =>
     lista.forEach(([nombre, unidad, planificada, presupuesto], i) =>
-      partidas.push({ id: `${obraId}-p${i + 1}`, obraId, nombre, unidad, planificada, presupuesto, orden: i + 1 }),
+      partidas.push({
+        id: `${obraId}-p${i + 1}`,
+        obraId,
+        nombre,
+        unidad,
+        planificada,
+        presupuesto,
+        precioUnitarioUF: null,
+        precioUnitarioCLP: Math.round(presupuesto / planificada / 1.475),
+        orden: i + 1,
+      }),
     )
 
   agregarPartidas('obra-lampa', [

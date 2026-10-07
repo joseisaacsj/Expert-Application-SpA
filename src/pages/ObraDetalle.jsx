@@ -172,6 +172,7 @@ export default function ObraDetalle() {
                 <th className="px-4 py-3 font-medium text-right">Plan.</th>
                 <th className="px-4 py-3 font-medium text-right">Ejec.</th>
                 <th className="px-4 py-3 font-medium w-40">Avance</th>
+                {veCostos && <th className="px-4 py-3 font-medium text-right">P. Unit.</th>}
                 {veCostos && <th className="px-4 py-3 font-medium text-right">Presupuesto</th>}
               </tr>
             </thead>
@@ -199,6 +200,11 @@ export default function ObraDetalle() {
                     </div>
                   </td>
                   {veCostos && (
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-500">
+                      {p.precioUnitarioCLP ? clp(p.precioUnitarioCLP) : '—'}
+                    </td>
+                  )}
+                  {veCostos && (
                     <td className="px-4 py-3 text-right tabular-nums">{clp(p.presupuesto)}</td>
                   )}
                 </tr>
@@ -207,15 +213,15 @@ export default function ObraDetalle() {
             {veCostos && (
               <tfoot>
                 <tr className="text-sm font-medium border-t border-slate-200 dark:border-ink-muted/40">
-                  <td className="px-4 py-3" colSpan={5}>Total</td>
+                  <td className="px-4 py-3" colSpan={6}>Total</td>
                   <td className="px-4 py-3 text-right tabular-nums">{clp(obra.presupuestoTotal)}</td>
                 </tr>
                 <tr className="text-sm text-slate-500">
-                  <td className="px-4 py-1" colSpan={5}>Gasto real acumulado</td>
+                  <td className="px-4 py-1" colSpan={6}>Gasto real acumulado</td>
                   <td className="px-4 py-1 text-right tabular-nums">{clp(obra.gastoReal)}</td>
                 </tr>
                 <tr className="text-sm text-slate-500">
-                  <td className="px-4 py-1" colSpan={5}>Valor ganado</td>
+                  <td className="px-4 py-1" colSpan={6}>Valor ganado</td>
                   <td className="px-4 py-1 text-right tabular-nums pb-3">{clp(obra.valorGanado)}</td>
                 </tr>
               </tfoot>

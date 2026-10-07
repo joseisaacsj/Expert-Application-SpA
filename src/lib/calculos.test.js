@@ -8,6 +8,8 @@ import {
   valorGanado,
   documentacionDia,
   indicadoresObra,
+  totalNetoPartida,
+  incidencia,
   UMBRALES_DEFECTO,
 } from './calculos.js'
 
@@ -74,6 +76,20 @@ describe('documentacionDia', () => {
   })
   it('sin dotación no genera alerta', () => {
     expect(documentacionDia(0, 0)).toBe(1)
+  })
+})
+
+describe('precio de partida (formato hoja de control)', () => {
+  it('total neto = cantidad × P.Unit CLP × (1 + GG + util)', () => {
+    // 100 m² × $10.000 × 1,475 = $1.475.000
+    expect(totalNetoPartida(100, 10000)).toBeCloseTo(1475000)
+  })
+  it('respeta GG y utilidad personalizados', () => {
+    expect(totalNetoPartida(100, 10000, 0, 0)).toBe(1000000)
+  })
+  it('incidencia es el peso de la partida en el total', () => {
+    expect(incidencia(250, 1000)).toBe(0.25)
+    expect(incidencia(10, 0)).toBe(0)
   })
 })
 

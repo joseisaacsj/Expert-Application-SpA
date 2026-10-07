@@ -72,6 +72,18 @@ export function documentacionDia(reportaron, dotacion) {
   return Math.min(1, reportaron / dotacion)
 }
 
+// Precio de partida estilo presupuesto de contrato:
+// Total Neto CLP = cantidad × precio unitario CLP × (1 + GG + utilidad).
+export function totalNetoPartida(cantidad, precioUnitarioCLP, gg = 0.325, util = 0.15) {
+  return cantidad * precioUnitarioCLP * (1 + gg + util)
+}
+
+// Incidencia: peso de la partida en el presupuesto total.
+export function incidencia(partidaNeto, totalNeto) {
+  if (!totalNeto || totalNeto <= 0) return 0
+  return partidaNeto / totalNeto
+}
+
 function nivel(valor, verde, amarillo) {
   if (valor >= verde) return 'verde'
   if (valor >= amarillo) return 'amarillo'

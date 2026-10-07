@@ -153,6 +153,23 @@ describe('crear obra', () => {
     expect(auditoria.descripcion).toContain('línea base protegida')
   })
 
+  it('calcula el presupuesto desde P.Unit CLP en el servidor', () => {
+    const { obra } = srv.crearObra(db, 'u-sup', {
+      nombre: 'Obra con precios',
+      fechaInicio: '2026-10-07',
+      plazoDias: 30,
+      ggPct: 0.325,
+      utilPct: 0.15,
+      partidas: [
+        { nombre: 'Cubierta', unidad: 'M2', planificada: 1000, precioUnitarioCLP: 26860, precioUnitarioUF: 0.68 },
+      ],
+    })
+    const p = db.partidas.find((x) => x.obraId === obra.id)
+    // 1000 × 26.860 × 1,475 = 39.618.500
+    expect(p.presupuesto).toBe(39618500)
+    expect(p.precioUnitarioCLP).toBe(26860)
+  })
+
   it('trabajador NO puede crear obras', () => {
     expect(() =>
       srv.crearObra(db, 'u-trab', {

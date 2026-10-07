@@ -82,7 +82,14 @@ export async function obtenerObrasParaClonar() {
       partidas: db.partidas
         .filter((p) => p.obraId === o.id)
         .sort((a, b) => a.orden - b.orden)
-        .map((p) => ({ nombre: p.nombre, unidad: p.unidad, planificada: p.planificada, presupuesto: p.presupuesto })),
+        .map((p) => ({
+          nombre: p.nombre,
+          unidad: p.unidad,
+          planificada: p.planificada,
+          presupuesto: p.presupuesto,
+          precioUnitarioUF: p.precioUnitarioUF,
+          precioUnitarioCLP: p.precioUnitarioCLP,
+        })),
     })),
   )
 }

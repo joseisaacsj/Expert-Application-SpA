@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Trash2, Plus, Check } from 'lucide-react'
 import { crearObra, obtenerObrasParaClonar } from '../lib/api.js'
-import { UMBRALES_DEFECTO } from '../lib/calculos.js'
+import { UMBRALES_DEFECTO, totalNetoPartida, incidencia } from '../lib/calculos.js'
 import Modal from '../components/Modal.jsx'
 import { clp } from '../lib/format.js'
 
@@ -36,6 +36,22 @@ function PasoIndicador({ actual }) {
 
 const inputClase =
   'w-full rounded-lg border border-slate-300 dark:border-ink-muted bg-transparent px-3 py-2 text-sm'
+const celdaClase =
+  'w-full rounded-md border border-slate-200 dark:border-ink-muted/60 bg-transparent px-2 py-1.5 text-sm tabular-nums'
+
+// Parsea números con formato chileno (miles con punto, decimales con coma).
+function numCL(texto) {
+  const limpio = String(texto ?? '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')
+  return Number(limpio) || 0
+}
+
+const partidaVacia = () => ({
+  nombre: '',
+  unidad: 'M2',
+  planificada: '',
+  precioUnitarioUF: '',
+  precioUnitarioCLP: '',
+})
 
 export default function CrearObra() {
   const navigate = useNavigate()
@@ -51,6 +67,8 @@ export default function CrearObra() {
     plazoDias: 60,
   })
   const [partidas, setPartidas] = useState([])
+  const [ggPct, setGgPct] = useState(32.5) // % gastos generales (por defecto como en la hoja)
+  const [utilPct, setUtilPct] = useState(15) // % utilidad
   const [umbrales, setUmbrales] = useState({ ...UMBRALES_DEFECTO })
   const [clonables, setClonables] = useState([])
 
@@ -58,13 +76,30 @@ export default function CrearObra() {
     obtenerObrasParaClonar().then(setClonables).catch(() => {})
   }, [])
 
+  // Totales calculados por partida (solo vista: el servidor los recalcula).
+  const partidasCalc = useMemo(
+    () =>
+      partidas.map((p) => {
+        const cant = Number(p.planificada) || 0
+        const pUF = Number(p.precioUnitarioUF) || 0
+        const pCLP = Number(p.precioUnitarioCLP) || 0
+        return {
+          ...p,
+          totalUF: cant * pUF,
+          totalCLP: cant * pCLP,
+          totalNeto: totalNetoPartida(cant, pCLP, ggPct / 100, utilPct / 100),
+        }
+      }),
+    [partidas, ggPct, utilPct],
+  )
+
   const presupuestoTotal = useMemo(
-    () => partidas.reduce((s, p) => s + (Number(p.presupuesto) || 0), 0),
-    [partidas],
+    () => partidasCalc.reduce((s, p) => s + p.totalNeto, 0),
+    [partidasCalc],
   )
 
   function agregarPartida() {
-    setPartidas([...partidas, { nombre: '', unidad: 'm²', planificada: '', presupuesto: '' }])
+    setPartidas([...partidas, partidaVacia()])
   }
 
   function cambiarPartida(i, campo, valor) {
@@ -73,35 +108,54 @@ export default function CrearObra() {
     setPartidas(copia)
   }
 
+  // Importa CSV exportado de Excel en formato chileno:
+  // separador ';', decimales con coma, columnas de la hoja de control:
+  // Descripción;Unidad;Cantidad;P.Unit UF;Total UF;P.Unit CLP;…
   function importarCsv(e) {
     const archivo = e.target.files?.[0]
     if (!archivo) return
     const reader = new FileReader()
     reader.onload = () => {
-      const lineas = String(reader.result)
+      const filas = String(reader.result)
         .split(/\r?\n/)
-        .map((l) => l.split(/[;,]/).map((c) => c.trim()))
-        .filter((cols) => cols.length >= 4 && cols[0])
-      const nuevas = lineas.map(([nombre, unidad, planificada, presupuesto]) => ({
-        nombre,
-        unidad: unidad || 'un',
-        planificada: Number(planificada) || 0,
-        presupuesto: Number(presupuesto) || 0,
-      }))
-      setPartidas([...partidas, ...nuevas])
+        .map((l) => l.split(';').map((c) => c.trim()))
+      // Saltar portada/encabezado: las filas de partida tienen ≥6 columnas
+      // y su columna 2 (cantidad) es numérica.
+      const nuevas = filas
+        .filter((cols) => cols.length >= 6 && numCL(cols[2]) > 0 && !/descripci/i.test(cols[0]))
+        .map((cols) => ({
+          nombre: cols[0],
+          unidad: cols[1] || 'un',
+          planificada: numCL(cols[2]),
+          precioUnitarioUF: numCL(cols[3]) || '',
+          precioUnitarioCLP: numCL(cols[5]) || '',
+        }))
+        .filter((p) => p.nombre)
+      if (nuevas.length) setPartidas([...partidas, ...nuevas])
     }
-    reader.readAsText(archivo)
+    reader.readAsText(archivo, 'windows-1252')
     e.target.value = ''
   }
 
   function clonar(obraId) {
     const origen = clonables.find((o) => o.id === obraId)
-    if (origen) setPartidas(origen.partidas.map((p) => ({ ...p })))
+    if (origen) {
+      setPartidas(
+        origen.partidas.map((p) => ({
+          nombre: p.nombre,
+          unidad: p.unidad,
+          planificada: p.planificada,
+          precioUnitarioUF: p.precioUnitarioUF ?? '',
+          precioUnitarioCLP: p.precioUnitarioCLP ?? '',
+        })),
+      )
+    }
   }
 
   function validarPaso() {
     if (paso === 0) return datos.nombre.trim() && datos.fechaInicio && datos.plazoDias > 0
-    if (paso === 1) return partidas.length > 0 && partidas.every((p) => p.nombre.trim() && Number(p.planificada) > 0)
+    if (paso === 1)
+      return partidas.length > 0 && partidas.every((p) => p.nombre.trim() && Number(p.planificada) > 0)
     return true
   }
 
@@ -113,9 +167,14 @@ export default function CrearObra() {
         ...datos,
         plazoDias: Number(datos.plazoDias),
         umbrales,
+        ggPct: ggPct / 100,
+        utilPct: utilPct / 100,
         partidas: partidas.map((p) => ({
-          ...p,
+          nombre: p.nombre,
+          unidad: p.unidad,
           planificada: Number(p.planificada),
+          precioUnitarioUF: Number(p.precioUnitarioUF) || null,
+          precioUnitarioCLP: Number(p.precioUnitarioCLP) || null,
           presupuesto: Number(p.presupuesto) || 0,
         })),
         estado: activar ? 'activa' : 'borrador',
@@ -130,7 +189,7 @@ export default function CrearObra() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-brand mb-3">
         <ArrowLeft size={15} /> Volver al tablero
       </Link>
@@ -170,7 +229,7 @@ export default function CrearObra() {
 
       {paso === 1 && (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <button type="button" onClick={agregarPartida}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark">
               <Plus size={15} /> Agregar partida
@@ -190,34 +249,93 @@ export default function CrearObra() {
                 <option key={o.id} value={o.id}>{o.nombre}</option>
               ))}
             </select>
+            <div className="flex items-center gap-3 ml-auto text-sm">
+              <label className="flex items-center gap-1 text-slate-500">
+                GG %
+                <input type="number" min="0" step="0.5" value={ggPct}
+                  onChange={(e) => setGgPct(Number(e.target.value))}
+                  className="w-20 rounded-md border border-slate-300 dark:border-ink-muted bg-transparent px-2 py-1.5 tabular-nums" />
+              </label>
+              <label className="flex items-center gap-1 text-slate-500">
+                Utilidad %
+                <input type="number" min="0" step="0.5" value={utilPct}
+                  onChange={(e) => setUtilPct(Number(e.target.value))}
+                  className="w-20 rounded-md border border-slate-300 dark:border-ink-muted bg-transparent px-2 py-1.5 tabular-nums" />
+              </label>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 p-4 space-y-3">
+          <div className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 overflow-x-auto">
+            <table className="w-full text-sm min-w-[1100px]">
+              <thead>
+                <tr className="text-left text-xs text-slate-500 border-b border-slate-200 dark:border-ink-muted/40">
+                  <th className="px-3 py-2 font-medium w-64">Descripción</th>
+                  <th className="px-3 py-2 font-medium w-16">Unidad</th>
+                  <th className="px-3 py-2 font-medium w-24">Cantidad</th>
+                  <th className="px-3 py-2 font-medium w-24">P. Unit. UF</th>
+                  <th className="px-3 py-2 font-medium w-24 text-right">Total UF</th>
+                  <th className="px-3 py-2 font-medium w-28">P. Unit. CLP</th>
+                  <th className="px-3 py-2 font-medium w-28 text-right">Total CLP</th>
+                  <th className="px-3 py-2 font-medium w-28 text-right">Total Neto CLP</th>
+                  <th className="px-3 py-2 font-medium w-16 text-right">Incid. %</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {partidasCalc.map((p, i) => (
+                  <tr key={i} className="border-b border-slate-100 dark:border-ink-muted/20 last:border-0">
+                    <td className="px-3 py-2">
+                      <input className={celdaClase} placeholder="Descripción de la partida"
+                        value={p.nombre} onChange={(e) => cambiarPartida(i, 'nombre', e.target.value)} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input className={celdaClase} value={p.unidad}
+                        onChange={(e) => cambiarPartida(i, 'unidad', e.target.value)} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input className={celdaClase} type="number" min="0" step="any" value={p.planificada}
+                        onChange={(e) => cambiarPartida(i, 'planificada', e.target.value)} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input className={celdaClase} type="number" min="0" step="any" value={p.precioUnitarioUF}
+                        onChange={(e) => cambiarPartida(i, 'precioUnitarioUF', e.target.value)} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                      {p.totalUF ? p.totalUF.toLocaleString('es-CL', { maximumFractionDigits: 2 }) : '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <input className={celdaClase} type="number" min="0" step="any" value={p.precioUnitarioCLP}
+                        onChange={(e) => cambiarPartida(i, 'precioUnitarioCLP', e.target.value)} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                      {p.totalCLP ? clp(p.totalCLP) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums font-medium text-ink dark:text-white">
+                      {p.totalNeto ? clp(p.totalNeto) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                      {presupuestoTotal ? `${(incidencia(p.totalNeto, presupuestoTotal) * 100).toFixed(1)}%` : '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <button type="button" aria-label="Quitar partida"
+                        onClick={() => setPartidas(partidas.filter((_, j) => j !== i))}
+                        className="p-1.5 text-slate-400 hover:text-semaforo-critico">
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             {partidas.length === 0 && (
-              <p className="text-sm text-slate-500 py-4 text-center">
-                Sin partidas. Agrega manualmente, importa un CSV (nombre;unidad;cantidad;presupuesto) o clona otra obra.
+              <p className="text-sm text-slate-500 py-6 text-center">
+                Sin partidas. Agrega manualmente, importa un CSV (formato de la hoja de control) o clona otra obra.
               </p>
             )}
-            {partidas.map((p, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input className={`${inputClase} col-span-5`} placeholder="Nombre de la partida"
-                  value={p.nombre} onChange={(e) => cambiarPartida(i, 'nombre', e.target.value)} />
-                <input className={`${inputClase} col-span-2`} placeholder="Unidad" value={p.unidad}
-                  onChange={(e) => cambiarPartida(i, 'unidad', e.target.value)} />
-                <input className={`${inputClase} col-span-2`} type="number" min="0" placeholder="Cantidad"
-                  value={p.planificada} onChange={(e) => cambiarPartida(i, 'planificada', e.target.value)} />
-                <input className={`${inputClase} col-span-2`} type="number" min="0" placeholder="$ presupuesto"
-                  value={p.presupuesto} onChange={(e) => cambiarPartida(i, 'presupuesto', e.target.value)} />
-                <button type="button" aria-label="Quitar partida"
-                  onClick={() => setPartidas(partidas.filter((_, j) => j !== i))}
-                  className="col-span-1 p-2 text-slate-400 hover:text-semaforo-critico">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
             {partidas.length > 0 && (
-              <p className="text-sm text-slate-500 text-right pt-2">
-                Presupuesto total: <strong className="text-ink dark:text-white">{clp(presupuestoTotal)}</strong>
+              <p className="text-sm text-slate-500 text-right px-4 py-3 border-t border-slate-200 dark:border-ink-muted/40">
+                Total Neto (con GG {ggPct}% + utilidad {utilPct}%):{' '}
+                <strong className="text-ink dark:text-white">{clp(presupuestoTotal)}</strong>
               </p>
             )}
           </div>
@@ -260,7 +378,8 @@ export default function CrearObra() {
             <dt className="text-slate-500">Inicio</dt><dd>{datos.fechaInicio}</dd>
             <dt className="text-slate-500">Plazo</dt><dd>{datos.plazoDias} días</dd>
             <dt className="text-slate-500">Partidas</dt><dd>{partidas.length}</dd>
-            <dt className="text-slate-500">Presupuesto</dt><dd>{clp(presupuestoTotal)}</dd>
+            <dt className="text-slate-500">GG / Utilidad</dt><dd>{ggPct}% / {utilPct}%</dd>
+            <dt className="text-slate-500">Presupuesto neto</dt><dd>{clp(presupuestoTotal)}</dd>
           </dl>
           <p className="text-xs text-slate-500 border-t border-slate-200 dark:border-ink-muted/40 pt-3">
             Al activar, la línea base queda protegida. Los cambios posteriores se registran

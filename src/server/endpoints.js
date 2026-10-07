@@ -1,4 +1,4 @@
-import { indicadoresObra, avancePartida } from '../lib/calculos.js'
+import { indicadoresObra, avancePartida, totalNetoPartida } from '../lib/calculos.js'
 import { hashSimulado } from './seed.js'
 import { fechaISO } from '../lib/format.js'
 
@@ -168,7 +168,9 @@ export function obtenerObra(db, usuarioId, obraId) {
       avance: p.avance,
       orden: p.orden,
     }
-    return veCostos ? { ...base, presupuesto: p.presupuesto } : base
+    return veCostos
+      ? { ...base, presupuesto: p.presupuesto, precioUnitarioCLP: p.precioUnitarioCLP, precioUnitarioUF: p.precioUnitarioUF }
+      : base
   })
 
   // El indicador de costo revela desempeño financiero: se omite si no hay permiso.
@@ -280,7 +282,11 @@ export function crearObra(db, usuarioId, datos) {
     throw new ApiError(403, 'Solo un supervisor o administrador puede crear obras')
   }
 
-  const { nombre, ubicacion, fechaInicio, plazoDias, umbrales, partidas = [], estado = 'borrador' } = datos
+  const {
+    nombre, ubicacion, fechaInicio, plazoDias, umbrales,
+    partidas = [], estado = 'borrador',
+    ggPct = 0.325, utilPct = 0.15,
+  } = datos
   if (!nombre?.trim()) throw new ApiError(400, 'La obra necesita un nombre')
   if (!fechaInicio || !(plazoDias > 0)) throw new ApiError(400, 'Fecha de inicio y plazo son obligatorios')
 
@@ -294,6 +300,8 @@ export function crearObra(db, usuarioId, datos) {
     plazoDias,
     materialesPct: 0,
     umbrales: umbrales || null,
+    ggPct,
+    utilPct,
     activadaEn: estado === 'activa' ? fechaISO() : null,
     creadaPor: usuarioId,
   }
@@ -303,13 +311,21 @@ export function crearObra(db, usuarioId, datos) {
     if (!p.nombre?.trim() || !(p.planificada > 0)) {
       throw new ApiError(400, `Partida ${i + 1} inválida`)
     }
+    // Si viene precio unitario CLP, el presupuesto es el Total Neto calculado
+    // en el servidor (nunca confiar en el total enviado por el cliente).
+    const pUnitCLP = Number(p.precioUnitarioCLP) || 0
+    const presupuesto = pUnitCLP > 0
+      ? Math.round(totalNetoPartida(p.planificada, pUnitCLP, ggPct, utilPct))
+      : Number(p.presupuesto) || 0
     db.partidas.push({
       id: `${obraId}-p${i + 1}`,
       obraId,
       nombre: p.nombre.trim(),
       unidad: p.unidad || 'un',
       planificada: p.planificada,
-      presupuesto: p.presupuesto || 0,
+      presupuesto,
+      precioUnitarioUF: Number(p.precioUnitarioUF) || null,
+      precioUnitarioCLP: pUnitCLP || null,
       orden: i + 1,
     })
   })
