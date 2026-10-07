@@ -8,6 +8,7 @@ import {
   TriangleAlert,
   CalendarDays,
   ClipboardList,
+  ClipboardPen,
 } from 'lucide-react'
 import { obtenerObra } from '../lib/api.js'
 import { exportarObraExcel } from '../lib/excel.js'
@@ -90,6 +91,15 @@ export default function ObraDetalle() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {obra.puedeReportar && (
+              <Link
+                to={`/reporte/${obra.id}`}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand hover:bg-brand-dark text-ink text-sm font-semibold transition-colors"
+              >
+                <ClipboardPen size={16} />
+                Registrar avance
+              </Link>
+            )}
             {obra.estado === 'finalizada' ? (
               <span className="text-sm text-slate-500 font-medium">Obra finalizada</span>
             ) : (

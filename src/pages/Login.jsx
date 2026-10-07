@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { HardHat, LogIn, Sun, Moon } from 'lucide-react'
+import { LogIn, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../context/auth.js'
 import { useTema } from '../context/theme.js'
 
@@ -48,7 +48,7 @@ export default function Login() {
 
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <HardHat className="text-brand mx-auto mb-3" size={44} />
+          <img src="/logo.png" alt="Expert Applicator" className="w-20 h-20 mx-auto mb-3 rounded-full shadow-sm" />
           <h1 className="text-2xl">Expert Applicator</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Control de obras y remodelaciones industriales
@@ -97,7 +97,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={cargando}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-60 text-white font-medium py-2.5 text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-60 text-ink font-medium py-2.5 text-sm transition-colors"
           >
             <LogIn size={16} />
             {cargando ? 'Ingresando…' : 'Ingresar'}

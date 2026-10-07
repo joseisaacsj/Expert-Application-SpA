@@ -191,6 +191,11 @@ export function obtenerObra(db, usuarioId, obraId) {
     alertas: alertasDe(db, obra, ind),
     partidas,
     auditoria: db.auditoria.filter((a) => a.obraId === obraId),
+    // ¿Esta persona ya envió su reporte hoy? Alimenta el banner del reporte.
+    miReporteHoy: db.reportes.some(
+      (r) => r.obraId === obraId && r.usuarioId === usuarioId && r.fecha === fechaISO(),
+    ),
+    puedeReportar: rol !== 'rrhh' && obra.estado === 'activa',
   }
 
   if (veCostos) {
@@ -285,7 +290,7 @@ export function crearObra(db, usuarioId, datos) {
   const {
     nombre, ubicacion, fechaInicio, plazoDias, umbrales,
     partidas = [], estado = 'borrador',
-    ggPct = 0.325, utilPct = 0.15,
+    ggPct = 0.325, utilPct = 0.15, valorUF = null,
   } = datos
   if (!nombre?.trim()) throw new ApiError(400, 'La obra necesita un nombre')
   if (!fechaInicio || !(plazoDias > 0)) throw new ApiError(400, 'Fecha de inicio y plazo son obligatorios')
@@ -302,6 +307,7 @@ export function crearObra(db, usuarioId, datos) {
     umbrales: umbrales || null,
     ggPct,
     utilPct,
+    valorUF,
     activadaEn: estado === 'activa' ? fechaISO() : null,
     creadaPor: usuarioId,
   }
@@ -311,9 +317,12 @@ export function crearObra(db, usuarioId, datos) {
     if (!p.nombre?.trim() || !(p.planificada > 0)) {
       throw new ApiError(400, `Partida ${i + 1} inválida`)
     }
-    // Si viene precio unitario CLP, el presupuesto es el Total Neto calculado
-    // en el servidor (nunca confiar en el total enviado por el cliente).
-    const pUnitCLP = Number(p.precioUnitarioCLP) || 0
+    // Si viene precio unitario CLP (o UF convertible con la UF del día), el
+    // presupuesto es el Total Neto calculado en el servidor — nunca se
+    // confía en el total enviado por el cliente.
+    const pUnitCLP =
+      Number(p.precioUnitarioCLP) ||
+      Math.round((Number(p.precioUnitarioUF) || 0) * (Number(valorUF) || 0))
     const presupuesto = pUnitCLP > 0
       ? Math.round(totalNetoPartida(p.planificada, pUnitCLP, ggPct, utilPct))
       : Number(p.presupuesto) || 0

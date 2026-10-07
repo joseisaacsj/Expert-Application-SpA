@@ -4,14 +4,14 @@
   "description": "Control de obras y remodelaciones industriales",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0D1B2A",
-  "theme_color": "#0DB3AE",
+  "background_color": "#FBF3E3",
+  "theme_color": "#D97706",
   "lang": "es-CL",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ]

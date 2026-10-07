@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { MapPin, CheckCircle2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { MapPin, CheckCircle2, ClipboardPen } from 'lucide-react'
 import { obtenerTablero } from '../lib/api.js'
 import { useAuth } from '../context/auth.js'
 import Semaforo from '../components/Semaforo.jsx'
@@ -29,8 +29,12 @@ function Barra({ valor, esperado }) {
   )
 }
 
+const ROLES_QUE_REPORTAN = ['trabajador', 'jefe_cuadrilla', 'supervisor', 'admin']
+
 function TarjetaObra({ obra }) {
+  const navigate = useNavigate()
   const finalizada = obra.estado === 'finalizada'
+  const puedeReportar = !finalizada && ROLES_QUE_REPORTAN.includes(obra.rol)
   return (
     <Link
       to={`/obras/${obra.id}`}
@@ -59,6 +63,21 @@ function TarjetaObra({ obra }) {
         <span>Programado {Math.round(obra.avanceProgramado * 100)}%</span>
       </div>
       <Barra valor={obra.avanceReal} esperado={obra.avanceProgramado} />
+
+      {puedeReportar && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            navigate(`/reporte/${obra.id}`)
+          }}
+          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-ink text-sm font-semibold transition-colors"
+        >
+          <ClipboardPen size={16} />
+          Registrar avance
+        </button>
+      )}
     </Link>
   )
 }

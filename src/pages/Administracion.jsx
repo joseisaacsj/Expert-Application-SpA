@@ -101,7 +101,7 @@ export default function Administracion() {
             </label>
           )}
           <button type="button" onClick={asignar} disabled={!form.usuarioId || !form.obraId}
-            className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
+            className="px-4 py-2 rounded-lg bg-brand text-ink text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
             Guardar
           </button>
         </div>
@@ -139,7 +139,7 @@ export default function Administracion() {
       <Modal abierto={!!modal} onCerrar={() => setModal(null)} titulo={modal?.titulo || ''}>
         <p className="text-sm text-slate-600 dark:text-slate-300">{modal?.texto}</p>
         <button type="button" onClick={() => setModal(null)}
-          className="mt-4 w-full rounded-lg bg-brand text-white py-2 text-sm font-medium">
+          className="mt-4 w-full rounded-lg bg-brand text-ink py-2 text-sm font-medium">
           Entendido
         </button>
       </Modal>

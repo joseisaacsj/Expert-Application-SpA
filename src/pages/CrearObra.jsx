@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Trash2, Plus, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Trash2, Plus, Check, Landmark } from 'lucide-react'
 import { crearObra, obtenerObrasParaClonar } from '../lib/api.js'
+import { obtenerIndicadores } from '../lib/indicadores.js'
 import { UMBRALES_DEFECTO, totalNetoPartida, incidencia } from '../lib/calculos.js'
 import Modal from '../components/Modal.jsx'
-import { clp } from '../lib/format.js'
+import { clp, fechaCorta } from '../lib/format.js'
 
 const PASOS = ['Datos generales', 'Partidas', 'Umbrales', 'Revisión']
 
@@ -18,7 +19,7 @@ function PasoIndicador({ actual }) {
               i < actual
                 ? 'bg-semaforo-verde text-white'
                 : i === actual
-                  ? 'bg-brand text-white'
+                  ? 'bg-brand text-ink'
                   : 'bg-slate-200 dark:bg-ink-muted/40 text-slate-500'
             }`}
           >
@@ -71,9 +72,17 @@ export default function CrearObra() {
   const [utilPct, setUtilPct] = useState(15) // % utilidad
   const [umbrales, setUmbrales] = useState({ ...UMBRALES_DEFECTO })
   const [clonables, setClonables] = useState([])
+  const [indicadores, setIndicadores] = useState(null)
+  const [valorUF, setValorUF] = useState('')
 
   useEffect(() => {
     obtenerObrasParaClonar().then(setClonables).catch(() => {})
+    obtenerIndicadores()
+      .then((ind) => {
+        setIndicadores(ind)
+        setValorUF(ind.uf)
+      })
+      .catch(() => {})
   }, [])
 
   // Totales calculados por partida (solo vista: el servidor los recalcula).
@@ -82,15 +91,17 @@ export default function CrearObra() {
       partidas.map((p) => {
         const cant = Number(p.planificada) || 0
         const pUF = Number(p.precioUnitarioUF) || 0
-        const pCLP = Number(p.precioUnitarioCLP) || 0
+        // Si solo hay precio UF, el CLP se deriva con la UF del día.
+        const pCLP = Number(p.precioUnitarioCLP) || Math.round(pUF * (Number(valorUF) || 0))
         return {
           ...p,
+          pCLPEfectivo: pCLP,
           totalUF: cant * pUF,
           totalCLP: cant * pCLP,
           totalNeto: totalNetoPartida(cant, pCLP, ggPct / 100, utilPct / 100),
         }
       }),
-    [partidas, ggPct, utilPct],
+    [partidas, ggPct, utilPct, valorUF],
   )
 
   const presupuestoTotal = useMemo(
@@ -169,13 +180,13 @@ export default function CrearObra() {
         umbrales,
         ggPct: ggPct / 100,
         utilPct: utilPct / 100,
-        partidas: partidas.map((p) => ({
+        valorUF: Number(valorUF) || null,
+        partidas: partidasCalc.map((p) => ({
           nombre: p.nombre,
           unidad: p.unidad,
           planificada: Number(p.planificada),
           precioUnitarioUF: Number(p.precioUnitarioUF) || null,
-          precioUnitarioCLP: Number(p.precioUnitarioCLP) || null,
-          presupuesto: Number(p.presupuesto) || 0,
+          precioUnitarioCLP: p.pCLPEfectivo || null,
         })),
         estado: activar ? 'activa' : 'borrador',
       })
@@ -231,7 +242,7 @@ export default function CrearObra() {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
             <button type="button" onClick={agregarPartida}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark">
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-brand text-ink text-sm font-medium hover:bg-brand-dark">
               <Plus size={15} /> Agregar partida
             </button>
             <label className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-ink-muted text-sm cursor-pointer hover:border-brand">
@@ -263,6 +274,29 @@ export default function CrearObra() {
                   className="w-20 rounded-md border border-slate-300 dark:border-ink-muted bg-transparent px-2 py-1.5 tabular-nums" />
               </label>
             </div>
+          </div>
+
+          {/* Indicadores económicos del día */}
+          <div className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <span className="inline-flex items-center gap-2 text-sm font-medium">
+              <Landmark size={17} className="text-brand" />
+              Indicadores del día
+            </span>
+            <span className="text-sm text-slate-500">
+              UF <strong className="text-ink dark:text-white tabular-nums">
+                {valorUF ? clp(valorUF) : '…'}
+              </strong>
+            </span>
+            <span className="text-sm text-slate-500">
+              UTM <strong className="text-ink dark:text-white tabular-nums">
+                {indicadores?.utm ? clp(indicadores.utm) : '…'}
+              </strong>
+            </span>
+            <span className="text-xs text-slate-400 ml-auto">
+              {indicadores
+                ? `Fuente: ${indicadores.fuente}${indicadores.ufFecha ? ` · UF al ${fechaCorta(indicadores.ufFecha)}` : ''}`
+                : 'Consultando indicadores…'}
+            </span>
           </div>
 
           <div className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 overflow-x-auto">
@@ -305,6 +339,7 @@ export default function CrearObra() {
                     </td>
                     <td className="px-3 py-2">
                       <input className={celdaClase} type="number" min="0" step="any" value={p.precioUnitarioCLP}
+                        placeholder={p.precioUnitarioUF && !p.precioUnitarioCLP ? `auto: ${clp(p.pCLPEfectivo)}` : ''}
                         onChange={(e) => cambiarPartida(i, 'precioUnitarioCLP', e.target.value)} />
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">
@@ -349,18 +384,51 @@ export default function CrearObra() {
           </p>
           <div className="grid sm:grid-cols-2 gap-4">
             {[
-              ['plazoVerde', 'SPI verde ≥', 0.05],
-              ['plazoAmarillo', 'SPI amarillo ≥', 0.05],
-              ['costoVerde', 'CPI verde ≥', 0.05],
-              ['costoAmarillo', 'CPI amarillo ≥', 0.05],
-              ['materialesVerde', 'Materiales verde ≥ (0-1)', 0.05],
-              ['materialesAmarillo', 'Materiales amarillo ≥ (0-1)', 0.05],
-              ['docVerde', 'Doc. verde ≥ (0-1)', 0.05],
-              ['docAmarillo', 'Doc. amarillo ≥ (0-1)', 0.05],
-            ].map(([campo, etiqueta, step]) => (
+              [
+                'plazoVerde',
+                'Cumplimiento de plazo (SPI): verde si es mayor o igual a',
+                'SPI = avance real ÷ avance programado. 1,00 = al día.',
+              ],
+              [
+                'plazoAmarillo',
+                'Cumplimiento de plazo (SPI): amarillo si es mayor o igual a',
+                'Bajo este valor la obra queda en estado crítico por atraso.',
+              ],
+              [
+                'costoVerde',
+                'Desempeño de costo (CPI): verde si es mayor o igual a',
+                'CPI = valor ganado ÷ gasto real. 1,00 = dentro del presupuesto.',
+              ],
+              [
+                'costoAmarillo',
+                'Desempeño de costo (CPI): amarillo si es mayor o igual a',
+                'Bajo este valor el gasto supera claramente el valor ganado.',
+              ],
+              [
+                'materialesVerde',
+                'Materiales comprados: verde si la proporción es mayor o igual a',
+                'Comprado ÷ requerido, de 0 a 1. Ej: 0,8 = 80% comprado.',
+              ],
+              [
+                'materialesAmarillo',
+                'Materiales comprados: amarillo si la proporción es mayor o igual a',
+                'Bajo este valor el abastecimiento se considera crítico.',
+              ],
+              [
+                'docVerde',
+                'Reportes del día: verde si la proporción es mayor o igual a',
+                'Personas que reportaron ÷ dotación activa. 1 = todos reportaron.',
+              ],
+              [
+                'docAmarillo',
+                'Reportes del día: amarillo si la proporción es mayor o igual a',
+                'Bajo este valor la documentación diaria se considera crítica.',
+              ],
+            ].map(([campo, etiqueta, ayuda]) => (
               <div key={campo}>
-                <label className="block text-sm font-medium mb-1" htmlFor={campo}>{etiqueta}</label>
-                <input id={campo} type="number" step={step} min="0" max="2" className={inputClase}
+                <label className="block text-sm font-medium mb-0.5" htmlFor={campo}>{etiqueta}</label>
+                <p className="text-xs text-slate-400 mb-1.5">{ayuda}</p>
+                <input id={campo} type="number" step={0.05} min="0" max="2" className={inputClase}
                   value={umbrales[campo]}
                   onChange={(e) => setUmbrales({ ...umbrales, [campo]: Number(e.target.value) })} />
               </div>
@@ -379,6 +447,7 @@ export default function CrearObra() {
             <dt className="text-slate-500">Plazo</dt><dd>{datos.plazoDias} días</dd>
             <dt className="text-slate-500">Partidas</dt><dd>{partidas.length}</dd>
             <dt className="text-slate-500">GG / Utilidad</dt><dd>{ggPct}% / {utilPct}%</dd>
+            <dt className="text-slate-500">UF referencia</dt><dd>{valorUF ? clp(valorUF) : '—'}</dd>
             <dt className="text-slate-500">Presupuesto neto</dt><dd>{clp(presupuestoTotal)}</dd>
           </dl>
           <p className="text-xs text-slate-500 border-t border-slate-200 dark:border-ink-muted/40 pt-3">
@@ -395,12 +464,12 @@ export default function CrearObra() {
         </button>
         {paso < PASOS.length - 1 ? (
           <button type="button" disabled={!validarPaso()} onClick={() => setPaso(paso + 1)}
-            className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand text-ink text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
             Siguiente <ArrowRight size={15} />
           </button>
         ) : (
           <button type="button" onClick={() => setModalConfirmar(true)}
-            className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark">
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand text-ink text-sm font-medium hover:bg-brand-dark">
             <Check size={15} /> Crear obra
           </button>
         )}
@@ -416,7 +485,7 @@ export default function CrearObra() {
             Guardar borrador
           </button>
           <button type="button" disabled={enviando} onClick={() => confirmar(true)}
-            className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
+            className="px-4 py-2 rounded-lg bg-brand text-ink text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
             {enviando ? 'Creando…' : 'Activar obra'}
           </button>
         </div>

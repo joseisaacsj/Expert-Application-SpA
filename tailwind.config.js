@@ -5,11 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Paleta inspirada en el logo EA: ámbar/miel suavizado.
         brand: {
-          DEFAULT: '#0DB3AE',
-          dark: '#0A8F8B',
-          light: '#5ADEDB',
+          DEFAULT: '#D97706',
+          dark: '#B45309',
+          light: '#F5C86B',
         },
+        cream: '#FBF3E3',
         ink: {
           DEFAULT: '#0D1B2A',
           soft: '#1B2E42',

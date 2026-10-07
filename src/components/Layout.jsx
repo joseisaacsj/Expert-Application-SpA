@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  HardHat,
   LayoutDashboard,
   ClipboardList,
   Users,
@@ -74,7 +73,7 @@ export default function Layout() {
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-ink/90 backdrop-blur border-b border-slate-200 dark:border-ink-muted/40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2 font-bold text-ink dark:text-white">
-            <HardHat className="text-brand" size={22} />
+            <img src="/logo.png" alt="Expert Applicator" className="w-8 h-8 rounded-full" />
             <span className="hidden sm:inline">Expert Applicator</span>
           </NavLink>
 
@@ -140,7 +139,7 @@ export function BotonNuevaObra() {
   return (
     <NavLink
       to="/obras/nueva"
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand-dark text-white text-sm font-medium transition-colors"
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand-dark text-ink text-sm font-medium transition-colors"
     >
       <PlusCircle size={16} />
       Nueva obra
