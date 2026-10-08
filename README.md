@@ -1,4 +1,4 @@
-# Expert Applicator SpA — Demo
+# Saint-Jérôme — Demo
 
 Plataforma de control de obras y remodelaciones industriales. **Frontend de demostración funcional**: el backend está simulado en el navegador para mostrar el alcance completo antes de construir el producto real (PHP + MySQL).
 

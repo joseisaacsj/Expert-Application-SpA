@@ -1,9 +1,9 @@
 const ROLES_TEXTO = {
-  admin: 'Administrador',
-  supervisor: 'Supervisor',
-  jefe_cuadrilla: 'Jefe de cuadrilla',
+  admin: 'Administración',
+  supervisor: 'Supervisor de Obras',
   trabajador: 'Trabajador',
   rrhh: 'RRHH',
+  finanzas: 'Finanzas',
 }
 
 export function rolTexto(rol) {

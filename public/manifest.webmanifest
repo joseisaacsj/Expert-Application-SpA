@@ -1,11 +1,11 @@
 {
-  "name": "Expert Applicator",
-  "short_name": "ExpertApp",
+  "name": "Saint-Jérôme",
+  "short_name": "StJérôme",
   "description": "Control de obras y remodelaciones industriales",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FBF3E3",
-  "theme_color": "#D97706",
+  "background_color": "#F7F4F1",
+  "theme_color": "#C4352C",
   "lang": "es-CL",
   "icons": [
     {

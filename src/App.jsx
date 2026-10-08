@@ -10,6 +10,12 @@ import CrearObra from './pages/CrearObra.jsx'
 import ReporteDiario from './pages/ReporteDiario.jsx'
 import RRHH from './pages/RRHH.jsx'
 import Administracion from './pages/Administracion.jsx'
+import RegistroProduccion from './pages/RegistroProduccion.jsx'
+import Planificacion from './pages/Planificacion.jsx'
+import Presupuesto from './pages/Presupuesto.jsx'
+import APU from './pages/APU.jsx'
+import Materiales from './pages/Materiales.jsx'
+import Finanzas from './pages/Finanzas.jsx'
 
 function RutaProtegida({ children }) {
   const { usuario } = useAuth()
@@ -41,6 +47,13 @@ export default function App() {
               <Route path="/" element={<Tablero />} />
               <Route path="/obras/nueva" element={<CrearObra />} />
               <Route path="/obras/:id" element={<ObraDetalle />} />
+              <Route path="/obras/:id/registro" element={<RegistroProduccion />} />
+              <Route path="/obras/:id/planificacion" element={<Planificacion />} />
+              <Route path="/obras/:id/presupuesto" element={<Presupuesto />} />
+              <Route path="/obras/:id/apu" element={<APU />} />
+              <Route path="/obras/:id/materiales" element={<Materiales />} />
+              <Route path="/obras/:id/finanzas" element={<Finanzas />} />
+              <Route path="/obras/:id/rrhh" element={<RRHH />} />
               <Route path="/reporte" element={<ReporteDiario />} />
               <Route path="/reporte/:obraId" element={<ReporteDiario />} />
               <Route path="/rrhh" element={<RRHH />} />

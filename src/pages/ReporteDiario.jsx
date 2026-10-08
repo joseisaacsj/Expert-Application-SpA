@@ -160,6 +160,26 @@ export default function ReporteDiario() {
 
   if (!obra) return <p className="text-slate-500">Cargando obra…</p>
 
+  // Solo el personal de terreno reporta; el resto supervisa en el registro.
+  if (obra.puedeReportar === false) {
+    return (
+      <div className="max-w-lg mx-auto">
+        <Link to={`/obras/${obra.id}/registro`} className="inline-flex items-center gap-1 text-sm text-brand mb-3">
+          <ArrowLeft size={15} /> Ir al registro de producción
+        </Link>
+        <h1 className="text-2xl mb-2">Reporte diario</h1>
+        <div className="rounded-xl border border-semaforo-amarillo/30 bg-semaforo-amarillo/10 text-semaforo-amarillo px-4 py-3 text-sm">
+          Tu cargo supervisa el avance: revisa el Registro Diario de Producción de la obra.
+          Solo el personal de terreno envía reportes.
+        </div>
+      </div>
+    )
+  }
+
+  // El personal de terreno solo reporta partidas en m² o ml.
+  const partidasReportables = obra.partidas.filter((p) =>
+    ['m²', 'm2', 'ml'].includes((p.unidad || '').toLowerCase()),
+  )
   const puedeEnviar = !enviando && (sinFaena || partidasValidas.length > 0)
   const enLinea = navigator.onLine
   const documentado = yaReporte || obra.miReporteHoy
@@ -189,7 +209,7 @@ export default function ReporteDiario() {
       ) : (
         <div className="mb-5 flex items-center gap-2 rounded-xl border border-semaforo-critico/30 bg-semaforo-critico/10 text-semaforo-critico px-4 py-3 text-sm font-medium">
           <Clock size={17} />
-          Aún no documentas el trabajo de hoy. Tu supervisora será avisada a las 18:00.
+          Aún no documentas el trabajo de hoy. Tu supervisor será avisado a las 18:00.
         </div>
       )}
 
@@ -224,9 +244,9 @@ export default function ReporteDiario() {
                   aria-label={`Partida ${i + 1}`}
                 >
                   <option value="">Selecciona partida…</option>
-                  {obra.partidas.map((p) => (
+                  {partidasReportables.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.nombre} ({p.unidad})
+                      {p.item ? `${p.item} — ` : ''}{p.nombre} ({p.unidad})
                     </option>
                   ))}
                 </select>
@@ -298,7 +318,7 @@ export default function ReporteDiario() {
           type="button"
           disabled={!puedeEnviar}
           onClick={enviar}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand hover:bg-brand-dark disabled:opacity-40 text-ink font-medium py-3 transition-colors"
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand hover:bg-brand-dark disabled:opacity-40 text-white font-medium py-3 transition-colors"
         >
           <Send size={17} />
           {enviando ? 'Enviando…' : navigator.onLine ? 'Enviar reporte' : 'Guardar en el teléfono'}
@@ -334,7 +354,7 @@ export default function ReporteDiario() {
       <Modal abierto={!!modal} onCerrar={() => setModal(null)} titulo={modal?.titulo || ''}>
         <p className="text-sm text-slate-600 dark:text-slate-300">{modal?.texto}</p>
         <button type="button" onClick={() => setModal(null)}
-          className="mt-4 w-full rounded-lg bg-brand text-ink py-2 text-sm font-medium">
+          className="mt-4 w-full rounded-lg bg-brand text-white py-2 text-sm font-medium">
           Entendido
         </button>
       </Modal>

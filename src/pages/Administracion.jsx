@@ -5,7 +5,7 @@ import Modal from '../components/Modal.jsx'
 import { rolTexto } from '../lib/roles.js'
 import { useAuth } from '../context/auth.js'
 
-const ROLES = ['supervisor', 'jefe_cuadrilla', 'trabajador', 'rrhh']
+const ROLES = ['supervisor', 'trabajador', 'rrhh', 'finanzas']
 
 const selectClase =
   'rounded-lg border border-slate-300 dark:border-ink-muted bg-white dark:bg-ink-soft px-2 py-1.5 text-sm'
@@ -18,7 +18,7 @@ export default function Administracion() {
   const [modal, setModal] = useState(null)
   const [confirmReset, setConfirmReset] = useState(false)
 
-  const [form, setForm] = useState({ usuarioId: '', obraId: '', rol: 'trabajador', verSueldos: false })
+  const [form, setForm] = useState({ usuarioId: '', obraId: '', rol: 'trabajador' })
 
   function cargar() {
     obtenerUsuarios().then(setUsuarios).catch((e) => setError(e.message))
@@ -33,7 +33,7 @@ export default function Administracion() {
         usuarioObjetivo: form.usuarioId,
         obraId: form.obraId,
         rol: form.rol,
-        permisos: form.verSueldos ? ['ver_sueldos'] : [],
+        permisos: [],
       })
       setModal({ titulo: 'Rol actualizado', texto: 'La membresía quedó guardada.' })
       cargar()
@@ -93,15 +93,8 @@ export default function Administracion() {
               ))}
             </select>
           </label>
-          {form.rol === 'rrhh' && (
-            <label className="flex items-center gap-2 text-xs text-slate-500 pb-2">
-              <input type="checkbox" className="accent-brand" checked={form.verSueldos}
-                onChange={(e) => setForm({ ...form, verSueldos: e.target.checked })} />
-              Permitir ver sueldos
-            </label>
-          )}
           <button type="button" onClick={asignar} disabled={!form.usuarioId || !form.obraId}
-            className="px-4 py-2 rounded-lg bg-brand text-ink text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
+            className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium disabled:opacity-40 hover:bg-brand-dark">
             Guardar
           </button>
         </div>
@@ -139,7 +132,7 @@ export default function Administracion() {
       <Modal abierto={!!modal} onCerrar={() => setModal(null)} titulo={modal?.titulo || ''}>
         <p className="text-sm text-slate-600 dark:text-slate-300">{modal?.texto}</p>
         <button type="button" onClick={() => setModal(null)}
-          className="mt-4 w-full rounded-lg bg-brand text-ink py-2 text-sm font-medium">
+          className="mt-4 w-full rounded-lg bg-brand text-white py-2 text-sm font-medium">
           Entendido
         </button>
       </Modal>

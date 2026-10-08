@@ -1,6 +1,6 @@
 // Service worker mínimo del demo: cache-first para el app shell.
 // Solo se registra en builds de producción (ver main.jsx).
-const CACHE = 'ea-cache-v1'
+const CACHE = 'ea-cache-v2'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/index.html', '/manifest.webmanifest', '/logo.png'])))

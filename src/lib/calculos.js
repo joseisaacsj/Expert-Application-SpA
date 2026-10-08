@@ -2,8 +2,11 @@
 // Nada aquí se guarda en la base de datos: los indicadores siempre se calculan.
 
 export const UMBRALES_DEFECTO = {
-  plazoVerde: 1.0,
-  plazoAmarillo: 0.9,
+  // Plazo: porcentaje del plazo contractual consumido.
+  // Verde hasta 33%, amarillo hasta 50%, naranja hasta 66%, crítico sobre 66%.
+  plazoVerde: 0.33,
+  plazoAmarillo: 0.5,
+  plazoNaranja: 0.66,
   costoVerde: 1.0,
   costoAmarillo: 0.95,
   materialesVerde: 0.8,
@@ -12,7 +15,7 @@ export const UMBRALES_DEFECTO = {
   docAmarillo: 0.5,
 }
 
-export const NIVELES = ['verde', 'amarillo', 'critico']
+export const NIVELES = ['verde', 'amarillo', 'naranja', 'critico']
 
 const MS_DIA = 24 * 60 * 60 * 1000
 
@@ -40,13 +43,20 @@ export function avanceGlobal(partidas) {
   return ganado / presupuestoTotal
 }
 
-// Avance programado lineal. Estrategia reemplazable (curva S a futuro).
+// Avance programado lineal.
 export function estrategiaLineal({ fechaInicio, plazoDias }, hoy) {
   if (!plazoDias || plazoDias <= 0) return 0
   return Math.min(1, diasEntre(fechaInicio, hoy) / plazoDias)
 }
 
-export function avanceProgramado(obra, hoy, estrategia = estrategiaLineal) {
+// Curva S (smoothstep): inicio lento, ritmo medio alto, cierre suave.
+// p(x) = 3x² - 2x³ con x = fracción del plazo consumido.
+export function estrategiaCurvaS(obra, hoy) {
+  const x = estrategiaLineal(obra, hoy)
+  return x * x * (3 - 2 * x)
+}
+
+export function avanceProgramado(obra, hoy, estrategia = estrategiaCurvaS) {
   return estrategia(obra, hoy)
 }
 
@@ -104,33 +114,53 @@ export function indicadoresObra({
   reportaronHoy,
   huboSinFaenaHoy,
   hoy,
+  estrategia,
 }) {
   const u = { ...UMBRALES_DEFECTO, ...(obra.umbrales || {}) }
   const presupuestoTotal = partidas.reduce((s, p) => s + (p.presupuesto || 0), 0)
 
   const real = avanceGlobal(partidas)
-  const programado = avanceProgramado(obra, hoy)
+  const programado = avanceProgramado(obra, hoy, estrategia)
   const spiValor = spi(real, programado)
   const vg = valorGanado(real, presupuestoTotal)
   const cpiValor = cpi(vg, gastoReal)
   const docValor = documentacionDia(reportaronHoy, obra.dotacionActiva ?? 0)
 
   const diferenciaPts = Math.round((programado - real) * 100)
+  const diasConsumidos = diasEntre(obra.fechaInicio, hoy)
+  const plazoConsumido = obra.plazoDias > 0 ? Math.min(1, diasConsumidos / obra.plazoDias) : 0
+  const diasRestantes = Math.max(0, obra.plazoDias - diasConsumidos)
+
+  // Nivel del plazo: 4 bandas sobre el % del plazo contractual consumido.
+  const nivelPlazo =
+    plazoConsumido <= u.plazoVerde
+      ? 'verde'
+      : plazoConsumido <= u.plazoAmarillo
+        ? 'amarillo'
+        : plazoConsumido <= u.plazoNaranja
+          ? 'naranja'
+          : 'critico'
 
   const indicadores = [
     {
       id: 'plazo',
-      nombre: 'Plazo (SPI)',
-      valor: spiValor,
-      valorTexto: Number.isFinite(spiValor) ? spiValor.toFixed(2) : '—',
-      nivel: nivel(spiValor, u.plazoVerde, u.plazoAmarillo),
+      nombre: 'Plazo',
+      valor: plazoConsumido,
+      valorTexto: `${diasRestantes} días`,
+      nivel: nivelPlazo,
       detalle:
-        diferenciaPts > 0
-          ? `Atraso de ${diferenciaPts} pts vs. programado`
-          : 'Al día o adelantada',
+        `Faltan ${diasRestantes} días para el término ` +
+        `(${pct(plazoConsumido)} del plazo consumido). ` +
+        (diferenciaPts > 0
+          ? `Avance ${diferenciaPts} pts bajo lo programado.`
+          : 'Avance al día o adelantado.'),
       explicacion:
-        `Avance real ${pct(real)} ÷ avance programado ${pct(programado)} ` +
-        `(lineal: ${diasEntre(obra.fechaInicio, hoy)} días de ${obra.plazoDias}).`,
+        `Semáforo por plazo consumido: ${diasConsumidos} de ${obra.plazoDias} días ` +
+        `(${pct(plazoConsumido)}). Verde ≤33%, amarillo ≤50%, naranja ≤66%, rojo sobre 66%. ` +
+        `SPI = avance real ${pct(real)} ÷ programado ${pct(programado)} = ` +
+        `${Number.isFinite(spiValor) ? spiValor.toFixed(2) : '—'} (curva S).`,
+      spi: spiValor,
+      diasRestantes,
     },
     {
       id: 'costo',
@@ -181,6 +211,9 @@ export function indicadoresObra({
     causa: peor.detalle,
     avanceReal: real,
     avanceProgramado: programado,
+    plazoConsumido,
+    diasRestantes,
+    spi: spiValor,
     presupuestoTotal,
     gastoReal,
     valorGanado: vg,

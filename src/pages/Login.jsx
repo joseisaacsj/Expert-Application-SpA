@@ -5,11 +5,17 @@ import { useAuth } from '../context/auth.js'
 import { useTema } from '../context/theme.js'
 
 const USUARIOS_DEMO = [
-  { usuario: 'admin', nombre: 'Carolina Fuentes', rol: 'Administrador' },
-  { usuario: 'supervisora', nombre: 'Marcela Rojas', rol: 'Supervisora de obra' },
-  { usuario: 'jefecuadrilla', nombre: 'Pedro Salinas', rol: 'Jefe de cuadrilla' },
-  { usuario: 'trabajador', nombre: 'Juan Pérez', rol: 'Trabajador' },
-  { usuario: 'rrhh', nombre: 'Valentina Soto', rol: 'RRHH' },
+  { usuario: 'ccarrasco', nombre: 'Claudio Carrasco', rol: 'Gerente General' },
+  { usuario: 'jcarrillo', nombre: 'Jeannette Carrillo', rol: 'Administradora' },
+  { usuario: 'mmansilla', nombre: 'Mauricio Mansilla', rol: 'Supervisor de Obras' },
+  { usuario: 'finanzas', nombre: 'Encargado de Finanzas', rol: 'Finanzas' },
+  { usuario: 'rrhh', nombre: 'Encargado de RRHH', rol: 'RRHH' },
+  { usuario: 'maestro1', nombre: 'Maestro de Cuadrilla 1', rol: 'Trabajador' },
+  { usuario: 'maestro2', nombre: 'Maestro de Cuadrilla 2', rol: 'Trabajador' },
+  { usuario: 'maestro3', nombre: 'Maestro de Cuadrilla 3', rol: 'Trabajador' },
+  { usuario: 'albanil', nombre: 'Albañil', rol: 'Trabajador' },
+  { usuario: 'carpintero', nombre: 'Carpintero', rol: 'Trabajador' },
+  { usuario: 'soldador', nombre: 'Soldador', rol: 'Trabajador' },
 ]
 
 export default function Login() {
@@ -46,19 +52,19 @@ export default function Login() {
         {tema === 'oscuro' ? <Sun size={18} /> : <Moon size={18} />}
       </button>
 
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <img src="/logo.png" alt="Expert Applicator" className="w-20 h-20 mx-auto mb-3 rounded-full shadow-sm" />
-          <h1 className="text-2xl">Expert Applicator</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Control de obras y remodelaciones industriales
-          </p>
-        </div>
+      <div className="w-full max-w-3xl grid gap-6 sm:grid-cols-[1fr_1.1fr] sm:items-start">
+        <div>
+          <div className="text-center mb-8">
+            <img src="/logo.png" alt="Saint-Jérôme" className="h-16 w-auto mx-auto mb-3 rounded-md bg-white px-3 py-1 shadow-sm" />
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              Control de obras y remodelaciones industriales
+            </p>
+          </div>
 
-        <form
-          onSubmit={entrar}
-          className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 p-6 shadow-sm space-y-4"
-        >
+          <form
+            onSubmit={entrar}
+            className="bg-white dark:bg-ink-soft rounded-2xl border border-slate-200 dark:border-ink-muted/40 p-6 shadow-sm space-y-4"
+          >
           <div>
             <label htmlFor="usuario" className="block text-sm font-medium mb-1">
               Usuario
@@ -97,18 +103,19 @@ export default function Login() {
           <button
             type="submit"
             disabled={cargando}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-60 text-ink font-medium py-2.5 text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand hover:bg-brand-dark disabled:opacity-60 text-white font-medium py-2.5 text-sm transition-colors"
           >
             <LogIn size={16} />
             {cargando ? 'Ingresando…' : 'Ingresar'}
           </button>
-        </form>
+          </form>
+        </div>
 
-        <div className="mt-6">
+        <div className="bg-white/60 dark:bg-ink-soft/60 rounded-2xl border border-slate-200 dark:border-ink-muted/40 p-4">
           <p className="text-xs text-center text-slate-500 mb-3">
             Usuarios de demo — contraseña <code className="font-mono">demo1234</code>
           </p>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-1.5">
             {USUARIOS_DEMO.map((u) => (
               <button
                 key={u.usuario}
@@ -117,7 +124,7 @@ export default function Login() {
                   setUsuario(u.usuario)
                   setPassword('demo1234')
                 }}
-                className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 dark:border-ink-muted/40 bg-white dark:bg-ink-soft text-sm hover:border-brand transition-colors text-left"
+                className="flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200 dark:border-ink-muted/40 bg-white dark:bg-ink-soft text-sm hover:border-brand transition-colors text-left"
               >
                 <span>
                   <span className="font-medium text-ink dark:text-white">{u.nombre}</span>

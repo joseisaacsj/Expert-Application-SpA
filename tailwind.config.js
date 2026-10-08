@@ -5,21 +5,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta inspirada en el logo EA: ámbar/miel suavizado.
+        // Paleta inspirada en el logo Saint-Jérôme: rojo león + carbón cálido.
         brand: {
-          DEFAULT: '#D97706',
-          dark: '#B45309',
-          light: '#F5C86B',
+          DEFAULT: '#C4352C',
+          dark: '#A32B23',
+          light: '#F0B9B5',
         },
-        cream: '#FBF3E3',
+        cream: '#F7F4F1',
         ink: {
-          DEFAULT: '#0D1B2A',
-          soft: '#1B2E42',
-          muted: '#41576E',
+          DEFAULT: '#262220',
+          soft: '#332E2B',
+          muted: '#574F4A',
         },
         semaforo: {
           verde: '#16A34A',
           amarillo: '#EAB308',
+          naranja: '#EA580C',
           critico: '#DC2626',
         },
       },

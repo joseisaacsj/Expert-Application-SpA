@@ -53,11 +53,13 @@ export default function Layout() {
   }, [])
 
   const esAdmin = usuario?.rolGlobal === 'admin'
+  const esTrabajador = usuario?.rolPrincipal === 'trabajador'
 
   const nav = [
     { a: '/', texto: 'Tablero', icono: LayoutDashboard },
-    { a: '/reporte', texto: 'Reporte diario', icono: ClipboardList },
-    { a: '/rrhh', texto: 'RRHH', icono: Users },
+    // Solo el personal de terreno reporta avance diario.
+    ...(esTrabajador ? [{ a: '/reporte', texto: 'Reporte diario', icono: ClipboardList }] : []),
+    ...(!esTrabajador ? [{ a: '/rrhh', texto: 'RRHH', icono: Users }] : []),
     ...(esAdmin ? [{ a: '/admin', texto: 'Administración', icono: Settings }] : []),
   ]
 
@@ -73,8 +75,7 @@ export default function Layout() {
       <header className="sticky top-0 z-40 bg-white/90 dark:bg-ink/90 backdrop-blur border-b border-slate-200 dark:border-ink-muted/40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <NavLink to="/" className="flex items-center gap-2 font-bold text-ink dark:text-white">
-            <img src="/logo.png" alt="Expert Applicator" className="w-8 h-8 rounded-full" />
-            <span className="hidden sm:inline">Expert Applicator</span>
+            <img src="/logo.png" alt="Saint-Jérôme" className="h-8 w-auto rounded bg-white px-1" />
           </NavLink>
 
           <nav className="flex-1 flex items-center gap-1 overflow-x-auto ml-2">
@@ -111,7 +112,7 @@ export default function Layout() {
 
           <div className="hidden sm:block text-right leading-tight">
             <div className="text-sm font-medium text-ink dark:text-white">{usuario?.nombre}</div>
-            <div className="text-xs text-slate-500">{rolTexto(usuario?.rolGlobal)}</div>
+            <div className="text-xs text-slate-500">{usuario?.cargo || rolTexto(usuario?.rolPrincipal)}</div>
           </div>
 
           <button
@@ -139,7 +140,7 @@ export function BotonNuevaObra() {
   return (
     <NavLink
       to="/obras/nueva"
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand-dark text-ink text-sm font-medium transition-colors"
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand-dark text-white text-sm font-medium transition-colors"
     >
       <PlusCircle size={16} />
       Nueva obra

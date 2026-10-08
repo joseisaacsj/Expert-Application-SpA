@@ -1,7 +1,8 @@
 // Semáforo accesible: siempre color + texto, nunca solo color.
 const ESTILOS = {
   verde: { punto: 'bg-semaforo-verde', texto: 'text-semaforo-verde', etiqueta: 'Al día' },
-  amarillo: { punto: 'bg-semaforo-amarillo', texto: 'text-semaforo-amarillo', etiqueta: 'Al límite' },
+  amarillo: { punto: 'bg-semaforo-amarillo', texto: 'text-semaforo-amarillo', etiqueta: 'Atención' },
+  naranja: { punto: 'bg-semaforo-naranja', texto: 'text-semaforo-naranja', etiqueta: 'Al límite' },
   critico: { punto: 'bg-semaforo-critico', texto: 'text-semaforo-critico', etiqueta: 'Crítica' },
 }
 

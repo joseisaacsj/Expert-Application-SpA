@@ -19,3 +19,27 @@
     @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-white dark:ring-offset-ink;
   }
 }
+
+/* El rojo de marca es oscuro para botones; en tema oscuro los textos de
+   marca usan el tono claro para no perder legibilidad sobre el carbón. */
+.dark .text-brand {
+  color: theme('colors.brand.light');
+}
+.dark .hover\:text-brand:hover,
+.dark .hover\:text-brand-dark:hover {
+  color: theme('colors.brand.light');
+}
+
+/* Ídem para los textos de semáforo: versiones claras sobre fondo oscuro. */
+.dark .text-semaforo-verde {
+  color: #4ADE80;
+}
+.dark .text-semaforo-amarillo {
+  color: #FDE047;
+}
+.dark .text-semaforo-naranja {
+  color: #FB923C;
+}
+.dark .text-semaforo-critico {
+  color: #F87171;
+}

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPin, CheckCircle2, ClipboardPen } from 'lucide-react'
-import { obtenerTablero } from '../lib/api.js'
+import { MapPin, CheckCircle2, ClipboardPen, Hourglass, RotateCcw } from 'lucide-react'
+import { obtenerTablero, obtenerCurvaS, resetearDemo } from '../lib/api.js'
 import { useAuth } from '../context/auth.js'
 import Semaforo from '../components/Semaforo.jsx'
+import CurvaS from '../components/CurvaS.jsx'
+import Modal from '../components/Modal.jsx'
 import { BotonNuevaObra } from '../components/Layout.jsx'
 import { fechaCorta } from '../lib/format.js'
 
@@ -29,12 +31,10 @@ function Barra({ valor, esperado }) {
   )
 }
 
-const ROLES_QUE_REPORTAN = ['trabajador', 'jefe_cuadrilla', 'supervisor', 'admin']
-
 function TarjetaObra({ obra }) {
   const navigate = useNavigate()
   const finalizada = obra.estado === 'finalizada'
-  const puedeReportar = !finalizada && ROLES_QUE_REPORTAN.includes(obra.rol)
+  const puedeReportar = !finalizada && obra.rol === 'trabajador'
   return (
     <Link
       to={`/obras/${obra.id}`}
@@ -50,9 +50,19 @@ function TarjetaObra({ obra }) {
           <Semaforo nivel={obra.estado_general} />
         )}
       </div>
-      <p className="text-xs text-slate-500 flex items-center gap-1 mb-4">
+      <p className="text-xs text-slate-500 flex items-center gap-1 mb-2">
         <MapPin size={12} /> {obra.ubicacion} · inicio {fechaCorta(obra.fechaInicio)}
       </p>
+
+      {!finalizada && obra.diasRestantes != null && (
+        <p className="text-sm font-medium text-ink dark:text-white flex items-center gap-1.5 mb-2">
+          <Hourglass size={14} className="text-brand" />
+          Faltan {obra.diasRestantes} días para el término
+          <span className="text-xs font-normal text-slate-500">
+            ({Math.round(obra.plazoConsumido * 100)}% del plazo)
+          </span>
+        </p>
+      )}
 
       {!finalizada && (
         <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{obra.causa}</p>
@@ -72,7 +82,7 @@ function TarjetaObra({ obra }) {
             e.stopPropagation()
             navigate(`/reporte/${obra.id}`)
           }}
-          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-ink text-sm font-semibold transition-colors"
+          className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold transition-colors"
         >
           <ClipboardPen size={16} />
           Registrar avance
@@ -86,10 +96,16 @@ export default function Tablero() {
   const { usuario } = useAuth()
   const [obras, setObras] = useState(null)
   const [error, setError] = useState('')
+  const [curva, setCurva] = useState(null)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   useEffect(() => {
     obtenerTablero()
-      .then(setObras)
+      .then((t) => {
+        setObras(t)
+        const activa = t.find((o) => o.estado === 'activa')
+        if (activa) obtenerCurvaS(activa.id).then(setCurva).catch(() => {})
+      })
       .catch((e) => setError(e.message))
   }, [])
 
@@ -109,7 +125,18 @@ export default function Tablero() {
             Hola, {usuario.nombre} — {obras.length} obra{obras.length !== 1 && 's'} a tu cargo
           </p>
         </div>
-        {puedeCrear && <BotonNuevaObra />}
+        <div className="flex items-center gap-2">
+          {usuario.rolGlobal === 'admin' && (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 dark:border-ink-muted text-sm text-slate-500 hover:border-semaforo-critico hover:text-semaforo-critico"
+            >
+              <RotateCcw size={15} /> Restaurar demo
+            </button>
+          )}
+          {puedeCrear && <BotonNuevaObra />}
+        </div>
       </div>
 
       <section aria-label="Obras operativas">
@@ -122,6 +149,18 @@ export default function Tablero() {
           ))}
         </div>
       </section>
+
+      {curva && activas.length > 0 && (
+        <section
+          aria-label="Curva S"
+          className="rounded-2xl border border-slate-200 dark:border-ink-muted/40 bg-white dark:bg-ink-soft p-5"
+        >
+          <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide mb-3">
+            Curva S — avance programado vs real ({activas[0].nombre})
+          </h2>
+          <CurvaS puntos={curva.puntos} />
+        </section>
+      )}
 
       {finalizadas.length > 0 && (
         <section aria-label="Obras finalizadas">
@@ -139,6 +178,29 @@ export default function Tablero() {
       {obras.length === 0 && (
         <p className="text-slate-500">No tienes obras asignadas todavía.</p>
       )}
+
+      <Modal abierto={confirmReset} onCerrar={() => setConfirmReset(false)} titulo="Restaurar demo">
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">
+          Se borrarán todos los cambios (reportes, obras nuevas, ediciones de partidas,
+          materiales y gastos) y se volverá a los datos de demo iniciales. ¿Continuar?
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button type="button" onClick={() => setConfirmReset(false)}
+            className="px-4 py-2 rounded-lg border border-slate-300 dark:border-ink-muted text-sm">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              await resetearDemo()
+              window.location.reload()
+            }}
+            className="px-4 py-2 rounded-lg bg-semaforo-critico text-white text-sm font-medium"
+          >
+            Restaurar
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

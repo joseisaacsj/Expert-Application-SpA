@@ -40,10 +40,14 @@ describe('avanceGlobal', () => {
 })
 
 describe('avanceProgramado', () => {
-  it('es lineal por defecto', () => {
+  it('es una curva S por defecto (más lenta al inicio y al final)', () => {
     const obra = { fechaInicio: '2026-01-01', plazoDias: 100 }
-    // día 50 → 50%
-    expect(avanceProgramado(obra, '2026-02-19')).toBeCloseTo(0.49, 1)
+    const x = 49 / 100
+    const esperado = x * x * (3 - 2 * x)
+    expect(avanceProgramado(obra, '2026-02-19')).toBeCloseTo(esperado, 3)
+    // En el punto medio la curva vale exactamente 0,5.
+    const mitad = avanceProgramado(obra, '2026-02-20')
+    expect(mitad).toBeCloseTo(0.5, 2)
   })
   it('topa en 100% pasado el plazo', () => {
     const obra = { fechaInicio: '2026-01-01', plazoDias: 10 }
@@ -116,16 +120,31 @@ describe('indicadoresObra', () => {
     expect(doc.nivel).toBe('verde')
   })
 
-  it('umbrales editables por obra cambian el semáforo', () => {
+  it('semáforo de plazo por fracción del plazo consumido', () => {
+    // 49 de 100 días → 49% consumido → banda amarilla (entre 33% y 50%).
+    const r = indicadoresObra(base)
+    const plazo = r.indicadores.find((i) => i.id === 'plazo')
+    expect(plazo.nivel).toBe('amarillo')
+    expect(plazo.diasRestantes).toBe(51)
+    expect(plazo.valorTexto).toContain('51')
+  })
+
+  it('umbrales editables por obra cambian el semáforo de plazo', () => {
     const r = indicadoresObra({
       ...base,
       obra: {
         ...base.obra,
-        umbrales: { ...UMBRALES_DEFECTO, plazoAmarillo: 0.5, plazoVerde: 1.5 },
+        umbrales: { ...UMBRALES_DEFECTO, plazoVerde: 0.6 },
       },
     })
     const plazo = r.indicadores.find((i) => i.id === 'plazo')
-    expect(plazo.nivel).toBe('amarillo') // SPI ~1.02 < 1.5
+    expect(plazo.nivel).toBe('verde') // 49% consumido < 60%
+  })
+
+  it('plazo en naranja entre 50% y 66% consumido', () => {
+    const r = indicadoresObra({ ...base, hoy: '2026-02-25' }) // 55 días = 55%
+    const plazo = r.indicadores.find((i) => i.id === 'plazo')
+    expect(plazo.nivel).toBe('naranja')
   })
 
   it('obra finalizada al 100% real', () => {

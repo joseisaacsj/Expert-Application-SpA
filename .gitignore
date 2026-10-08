@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Volcado temporal del Excel de control (artefacto de trabajo)
+.xlsx-dump/
